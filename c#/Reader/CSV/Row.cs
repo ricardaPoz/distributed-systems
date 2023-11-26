@@ -22,6 +22,12 @@ public class Row
 
             else return Values[index];
         }
+        set
+        {
+            if (index < 0 && index > Values.Length)
+                throw new ArgumentOutOfRangeException();
+            else Values[index] = value;
+        }
     }
 
     public T Get<T>(int index)
@@ -35,6 +41,11 @@ public class Row
             throw new InvalidCastException();
 
         return (T)Convert.ChangeType(Values[index], typeof(T));
+    }
+
+    public override string ToString()
+    {
+        return string.Join(",", Values);
     }
 }
 
