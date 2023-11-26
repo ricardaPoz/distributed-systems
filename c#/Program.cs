@@ -1,2 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿var path = 
+    Directory.GetParent(Directory.GetCurrentDirectory())
+    ?.Parent?.Parent?.Parent?.ToString() + @"\data\Salary.csv";
+
+// BenchmarkRunner.Run<BenchmarkReader>();
