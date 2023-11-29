@@ -1,11 +1,9 @@
-﻿using System.ComponentModel;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
-namespace c_.Reader.CSV;
+namespace CSharp.Element;
 
-public class Column
+public class Column : BaseElement
 {
-    private const string PATTERN = "(?<=^|,)([^,]*)(?=,|$)";
     public (string name, int index)[] Values { get; init; }
 
     public Column(string line)
@@ -32,9 +30,13 @@ public class Column
 
             if (index == -1)
                 throw new InvalidOperationException($"The '{name}' element is missing from the array.");
-            
+
 
             else return index;
         }
+    }
+    public override string ToString()
+    {
+        return string.Join(",", Values);
     }
 }

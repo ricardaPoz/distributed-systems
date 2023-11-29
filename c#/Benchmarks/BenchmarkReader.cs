@@ -1,7 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
-using c_.Reader.CSV;
+using CSharp.Reader.CSV;
 
-namespace c_.Benchmarks;
+namespace CSharp.Benchmarks;
 
 [MemoryDiagnoser]
 [RankColumn]

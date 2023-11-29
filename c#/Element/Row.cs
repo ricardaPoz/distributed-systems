@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.RegularExpressions;
 
-namespace c_.Reader.CSV;
+namespace CSharp.Element;
 
-public class Row
+public class Row: BaseElement
 {
-    private const string PATTERN = "(?<=^|,)([^,]*)(?=,|$)";
     public string[] Values {get; init;}
 
     public Row(string line)
@@ -40,12 +39,16 @@ public class Row
         if (!converter.IsValid(Values[index]))
             throw new InvalidCastException();
 
-        return (T)Convert.ChangeType(Values[index], typeof(T));
+        return (T)Convert.ChangeType(Values[index].Replace('.', ','), typeof(T));
     }
 
     public override string ToString()
     {
-        return string.Join(",", Values);
+        Func<string, int, string> trancute = (string input, int length) => {
+            return input.Length > length ? input[..length] : input;
+        };
+        var result = Values.Select(r => trancute(r,5));
+        return string.Join(",", result);
     }
 }
 
