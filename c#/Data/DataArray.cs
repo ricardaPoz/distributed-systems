@@ -8,7 +8,7 @@ namespace CSharp.Data;
 
 public class DataArray
 {
-    private readonly ICorrelation pearson;
+    private readonly ICorrelation correlation;
     private Column column;
     private List<Row> rows;
 
@@ -19,36 +19,29 @@ public class DataArray
 
     public int CountRows { get => rows.Count; }
 
-    public DataArray(Column column, List<Row> rows, ICorrelation pearson)
+    public DataArray(Column column, List<Row> rows, ICorrelation correlation)
     {
         this.rows = rows;
         this.column = column;
-        this.pearson = pearson;
+        this.correlation = correlation;
     }
-
-    public DataArray(Column column, List<Row> rows)
-    {
-        this.rows = rows;
-        this.column = column;
-        this.pearson = new Pearson();
-    }
-    public DataArray(Column column, Row row)
+    public DataArray(Column column, Row row, ICorrelation correlation)
     {
         this.rows = new List<Row> { row };
         this.column = column;
-        this.pearson = new Pearson();
+        this.correlation = correlation;
     }
 
     public Row this[int index] => index >= 0 && index < rows.Count
                  ? rows[index]
                  : throw new ArgumentOutOfRangeException();
 
-    public string this[string column, int row]
+    public string this[string nameColumn, int indexRow]
     {
         get
         {
-            var indexColumn = this.column[column];
-            return rows[row].Values[indexColumn];
+            var indexColumn = this.column[nameColumn];
+            return rows[indexRow][indexColumn];
         }
     }
 
@@ -130,7 +123,7 @@ public class DataArray
 
     public DataArray Head(int take)
     {
-        return new DataArray(column, rows.Take(take).ToList());
+        return new DataArray(column, rows.Take(take).ToList(), correlation);
     }
 
     public List<(string name, DataArray)> Correlation()
@@ -150,13 +143,13 @@ public class DataArray
         {
             var x = Get<double>(column.name).ToArray();
             var y = Get<double>(columnName).ToArray();
-            var correlation = pearson.Correlation(ref x, ref y);
-            result.Add((column.name, correlation));
+            var corr = correlation.Correlation(ref x, ref y);
+            result.Add((column.name, corr));
         }
 
         var c = string.Join(",", result.Select(c => c.Item1));
         var r = string.Join(",", result.Select(c => c.Item2));
-        return new DataArray(new Column(c), new Row(r));
+        return new DataArray(new Column(c), new Row(r), correlation);
     }
     public async Task<List<(string name, DataArray)>> CorrelationAsync()
     {
@@ -182,15 +175,15 @@ public class DataArray
             {
                 var x = Get<double>(column.name).ToArray();
                 var y = Get<double>(columnName).ToArray();
-                var correlation = pearson.Correlation(ref x, ref y);
-                return (column.name, correlation);
+                var corr = correlation.Correlation(ref x, ref y);
+                return (column.name, corr);
             });
             tasks.Add(t);
         }
         var result = await Task.WhenAll(tasks.ToArray());
         var c = string.Join(",", result.Select(c => c.Item1));
         var r = string.Join(",", result.Select(c => c.Item2));
-        return new DataArray(new Column(c), new Row(r));
+        return new DataArray(new Column(c), new Row(r), correlation);
     }
 }
 

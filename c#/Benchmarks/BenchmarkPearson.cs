@@ -75,7 +75,7 @@ public class BenchmarkPearson
     public void DataArrayPearsonSalary()
     {
         var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList());
+        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
 
 
         var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
@@ -92,10 +92,10 @@ public class BenchmarkPearson
     }
 
     [Benchmark]
-    public async Task DataArrayPearsonSalaryAsunc()
+    public async Task DataArrayPearsonSalaryAsync()
     {
         var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList());
+        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
 
 
         var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
@@ -115,7 +115,7 @@ public class BenchmarkPearson
     public void DataArrayPearson()
     {
         var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList());
+        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
 
 
         var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
@@ -132,10 +132,10 @@ public class BenchmarkPearson
     }
 
     [Benchmark]
-    public async Task DataArrayPearsonAsunc()
+    public async Task DataArrayPearsonAsync()
     {
         var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList());
+        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
 
 
         var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
