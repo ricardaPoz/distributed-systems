@@ -1,6 +1,7 @@
-﻿using c_.Reader.Interfaces;
+﻿using CSharp.Element;
+using CSharp.Reader.Interfaces;
 
-namespace c_.Reader.CSV;
+namespace CSharp.Reader.CSV;
 
 public class CsvReader : IReadableFile
 {
