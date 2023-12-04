@@ -1,153 +1,117 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 using CSharp.Correlation;
 using CSharp.Data;
+using CSharp.Element;
 using CSharp.Reader.CSV;
 
 namespace CSharp.Benchmarks;
 
-
+[Config(typeof(AntiVirusFriendlyConfig))]
 [MemoryDiagnoser]
 [RankColumn]
 public class BenchmarkPearson
 {
-    private static string path = @"C:\Users\santa\source\Repos\distributed-systems\data\Salary.csv";
-
-    [Benchmark]
-    public void RandomDoubleValue()
+    private class AntiVirusFriendlyConfig : ManualConfig
     {
-        Random randNum = new Random();
-        var x = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextDouble())
-            .ToArray();
-
-        var y = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextDouble())
-            .ToArray();
-
-        var pearson = new Pearson().Correlation(ref x, ref y);
+        public AntiVirusFriendlyConfig()
+        {
+            AddJob(Job.MediumRun
+                .WithToolchain(InProcessNoEmitToolchain.Instance));
+        }
     }
 
-    [Benchmark]
-    public void RandomFloatValue()
+    private readonly DataArray _dataArray;
+    private readonly DataArray _randomDataArray;
+
+    [SuppressMessage("ReSharper.DPA", "DPA0002: Excessive memory allocations in SOH",
+        MessageId = "type: System.String; size: 279MB")]
+    public BenchmarkPearson()
     {
-        Random randNum = new Random();
-        var x = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextSingle())
-            .ToArray();
+        #region Создание DataArray на основе CSV файла
 
-        var y = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextSingle())
-            .ToArray();
+        var path = Directory.GetParent(Directory.GetCurrentDirectory())
+            ?.Parent?.Parent?.Parent + @"\data\Salary.csv";
 
-        var pearson = new Pearson().Correlation(ref x, ref y);
-    }
-    [Benchmark]
-    public void RandomDoubleValueGeneric()
-    {
-        Random randNum = new Random();
-        var x = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextDouble())
-            .ToArray();
-
-        var y = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextDouble())
-            .ToArray();
-
-        var pearson = new Pearson<double>().Correlation(ref x, ref y);
-    }
-
-    [Benchmark]
-    public void RandomFloatValueGeneric()
-    {
-        Random randNum = new Random();
-        var x = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextSingle())
-            .ToArray();
-
-        var y = Enumerable.Repeat(0, 100000)
-            .Select(i => randNum.NextSingle())
-            .ToArray();
-
-        var pearson = new Pearson<float>().Correlation(ref x, ref y);
-    }
-
-    [Benchmark]
-    public void DataArrayPearsonSalary()
-    {
         var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
-
-
-        var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
+        _dataArray = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
+        var nameColumns = new[] { "Gender", "Race", "Country", "Job Title" };
         foreach (var nameColumn in nameColumns)
         {
-            var unique = df[nameColumn]
+            var unique = _dataArray[nameColumn]
                 .Unique()
                 .Select((value, index) => (value, index))
                 .ToDictionary(v => v.value, v => v.index.ToString());
-            df.Replase(unique);
+            _dataArray.Replace(unique);
         }
 
-        var corr = df.Correlation("Salary");
-    }
+        #endregion
 
-    [Benchmark]
-    public async Task DataArrayPearsonSalaryAsync()
-    {
-        var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
+        #region Создание DataArray на основе заданных колличества строк и стообцов
+        
+        var sb = new StringBuilder();
+        var random = new Random();
+        const int countRows = 10000, countColumns = 100;
 
+        var columns = new string [countColumns];
+        var rows = new List<Row>();
 
-        var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
-        foreach (var nameColumn in nameColumns)
+        for (var i = 0; i < countColumns; i++) columns[i] = i.ToString();
+
+        for (var i = 0; i < countRows; i++)
         {
-            var unique = df[nameColumn]
-                .Unique()
-                .Select((value, index) => (value, index))
-                .ToDictionary(v => v.value, v => v.index.ToString());
-            df.Replase(unique);
+            var row = Enumerable.Repeat(0, 100)
+                .Select(inx => random.NextSingle());
+
+            sb.AppendJoin(',', row);
+            rows.Add(new Row(sb.ToString()));
+            sb.Clear();
         }
 
-        var corr = await df.CorrelationAsync("Salary");
+        sb.AppendJoin(',', columns);
+        _randomDataArray = new DataArray(new Column(sb.ToString()), rows, new Pearson());
+
+        #endregion
     }
 
-    [Benchmark]
-    public void DataArrayPearson()
+    [Benchmark(Description = "Multithreading correlation. Rows = 10000, Columns = 100")]
+    public async Task<DataArray> RCorrelationAsync()
     {
-        var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
-
-
-        var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
-        foreach (var nameColumn in nameColumns)
-        {
-            var unique = df[nameColumn]
-                .Unique()
-                .Select((value, index) => (value, index))
-                .ToDictionary(v => v.value, v => v.index.ToString());
-            df.Replase(unique);
-        }
-
-        var corr = df.Correlation();
+        return await _randomDataArray.CorrelationAsync("0");
     }
 
-    [Benchmark]
-    public async Task DataArrayPearsonAsync()
+    [Benchmark(Description = "Synchronous correlation. Rows = 10000, Columns = 100")]
+    public DataArray RCorrelation()
     {
-        var reader = new CsvReader(path);
-        var df = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
-
-
-        var nameColumns = new string[] { "Gender", "Race", "Country", "Job Title" };
-        foreach (var nameColumn in nameColumns)
-        {
-            var unique = df[nameColumn]
-                .Unique()
-                .Select((value, index) => (value, index))
-                .ToDictionary(v => v.value, v => v.index.ToString());
-            df.Replase(unique);
-        }
-
-        var corr = await df.CorrelationAsync();
+        return _randomDataArray.Correlation("0");
     }
+
+    [Benchmark(Description = "Multithreading correlation CSV file. Rows = 6685, Columns = 10")]
+    public async Task<DataArray> CorrelationAsync()
+    {
+        return await _dataArray.CorrelationAsync("Salary");
+    }
+
+    [Benchmark(Description = "Synchronous correlation CSV file. Rows = 6685, Columns = 10")]
+    public DataArray Correlation()
+    {
+        return _dataArray.Correlation("Salary");
+    }
+    
+    [Benchmark(Description = "Multithreading correlation matrix CSV file. Rows = 6685, Columns = 10")]
+    public async Task<List<(string name, DataArray)>> MCorrelationAsync()
+    {
+        return await _dataArray.CorrelationAsync();
+    }
+
+    [Benchmark(Description = "Synchronous correlation matrix CSV file. Rows = 6685, Columns = 10")]
+    public List<(string name, DataArray)> MCorrelation()
+    {
+        return _dataArray.Correlation();
+    }
+    
 }

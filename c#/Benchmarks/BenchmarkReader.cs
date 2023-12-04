@@ -7,13 +7,14 @@ namespace CSharp.Benchmarks;
 [RankColumn]
 public class BenchmarkReader
 {
-    private static string path = @"C:\Users\santa\source\Repos\distributed-systems\data\Salary.csv";
+    private static readonly string path = @"C:\Users\santa\source\Repos\distributed-systems\data\Salary.csv";
 
     [Benchmark]
     public void ReadFileTest()
     {
         var result = new CsvReader(path).ReadFile();
     }
+
     [Benchmark]
     public async Task ReadFileTestAsync()
     {

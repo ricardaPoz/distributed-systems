@@ -1,86 +1,49 @@
-﻿using System.Collections.Immutable;
+﻿using System.Globalization;
 using System.Text;
 using CSharp.Correlation;
 using CSharp.Element;
-using CSharp.Reader.Interfaces;
 
 namespace CSharp.Data;
 
 public class DataArray
 {
-    private readonly ICorrelation correlation;
-    private Column column;
-    private List<Row> rows;
+    private readonly Column _column;
+    private readonly ICorrelation _correlation;
+    private readonly List<Row> _rows;
+    public string[] Header => _column.Values.Select(c => c.name).ToArray();
+    public int CountRows => _rows.Count;
 
-    public string[] Header
-    {
-        get => column.Values.Select(c => c.name).ToArray();
-    }
-
-    public int CountRows { get => rows.Count; }
 
     public DataArray(Column column, List<Row> rows, ICorrelation correlation)
     {
-        this.rows = rows;
-        this.column = column;
-        this.correlation = correlation;
+        _rows = rows;
+        _column = column;
+        _correlation = correlation;
     }
+
     public DataArray(Column column, Row row, ICorrelation correlation)
     {
-        this.rows = new List<Row> { row };
-        this.column = column;
-        this.correlation = correlation;
+        _rows = new List<Row> { row };
+        _column = column;
+        _correlation = correlation;
     }
-
-    public Row this[int index] => index >= 0 && index < rows.Count
-                 ? rows[index]
-                 : throw new ArgumentOutOfRangeException();
-
-    public string this[string nameColumn, int indexRow]
-    {
-        get
-        {
-            var indexColumn = this.column[nameColumn];
-            return rows[indexRow][indexColumn];
-        }
-    }
-
-    public string this[int indexColumn, int indexRow]
-    {
-        get
-        {
-            return rows[indexRow].Values[indexColumn];
-        }
-    }
-
-    public List<Row> this[Range range]
-    {
-        get
-        {
-            (int offset, int length) = range.GetOffsetAndLength(rows.Count);
-            return rows.GetRange(offset, length);
-        }
-    }
-
-    public Row this[Index index] { get => rows[index]; }
 
     public List<Row> this[params string[] names]
     {
         get
         {
-            var indexs = column.Values
-                .Where(c => names.Contains(c.name))
-                .ToArray();
+            var indexes = _column.Values
+                .Where(c => names.Contains(c.name));
 
-            if (indexs.Length < names.Length)
+            if (indexes.Count() < names.Length)
             {
-                var except = string.Join(",", names.Except(indexs.Select(c => c.name)));
+                var except = string.Join(",", names.Except(indexes.Select(c => c.name)));
                 throw new ArgumentOutOfRangeException($"The '{except}' elements is missing from the array.");
             }
 
-            return rows.Select(row =>
+            return _rows.Select(row =>
             {
-                var values = indexs.Select(i => row[i.index]);
+                var values = indexes.Select(i => row[i.index]);
                 return new Row(string.Join(",", values));
             }).ToList();
         }
@@ -88,122 +51,108 @@ public class DataArray
 
     public IEnumerable<T> Get<T>(string columnName)
     {
-        var indexColumn = this.column[columnName];
-        return rows.Select(row => row.Get<T>(indexColumn));
+        var indexColumn = _column[columnName];
+        return _rows.Select(row => row.Get<T>(indexColumn));
     }
 
-    public void Replase(Dictionary<string, string> values)
+    public void Replace(Dictionary<string, string> values)
     {
-        Replase<string>(values);
-    }
-
-    public void Replase<T>(Dictionary<string, T> values) where T : notnull
-    {
-        foreach (var row in rows)
+        foreach (var row in _rows)
+        foreach (var value in values)
         {
-            foreach (var value in values)
-            {
-                var index = row.Values.ToList().FindIndex(r => r.Contains(value.Key));
-                if (index != -1)
-                {
-                    row[index] = value.Value.ToString();
-                }
-            }
+            var index = Array.FindIndex(row.Values, r => r.Contains(value.Key));
+            if (index != -1) row[index] = value.Value;
         }
-    }
-
-
-    public override string ToString()
-    {
-        StringBuilder sb = new StringBuilder();
-        sb.Append(string.Join(",", Header)).Append(Environment.NewLine);
-        sb.Append(string.Join(Environment.NewLine, rows.Select(r => r.ToString())));
-        return sb.ToString();
-    }
-
-    public DataArray Head(int take)
-    {
-        return new DataArray(column, rows.Take(take).ToList(), correlation);
     }
 
     public List<(string name, DataArray)> Correlation()
     {
-        List<(string name, DataArray)>? result = new();
-        foreach (var column in this.column.Values)
+        List<(string name, DataArray)> result = new();
+        foreach (var column in _column.Values)
         {
             result.Add((column.name, Correlation(column.name)));
         }
         return result;
     }
-
-    public DataArray Correlation(string columnName)
-    {
-        List<(string, double)> result = new();
-        foreach (var column in this.column.Values)
-        {
-            var x = Get<double>(column.name).ToArray();
-            var y = Get<double>(columnName).ToArray();
-            var corr = correlation.Correlation(ref x, ref y);
-            result.Add((column.name, corr));
-        }
-
-        var c = string.Join(",", result.Select(c => c.Item1));
-        var r = string.Join(",", result.Select(c => c.Item2));
-        return new DataArray(new Column(c), new Row(r), correlation);
-    }
+    
     public async Task<List<(string name, DataArray)>> CorrelationAsync()
     {
         List<Task<(string name, DataArray)>> tasks = new();
 
-        foreach (var col in column.Values)
+        foreach (var col in _column.Values)
         {
-            var t = Task.Run(async () => {
-                return (col.name, await CorrelationAsync(col.name));
-            });
+            var t = Task.Run(async () => (col.name, await CorrelationAsync(col.name)));
             tasks.Add(t);
         }
+
         var result = await Task.WhenAll(tasks.ToArray());
         return result.ToList();
     }
+    
+    /// <summary>
+    /// Метод, расчитывающий корреляцию для конкретного столбца.
+    /// Создется поток для каждого столбца.
+    /// </summary>
+    /// <param name="columnName">Наименование столбца</param>
+    /// <returns>Task&lt;DataArray&gt;</returns>
     public async Task<DataArray> CorrelationAsync(string columnName)
     {
-        List<Task<(string, double)>> tasks = new();
+        List<Task<(string, float)>> tasks = new();
+        var sb = new StringBuilder();
 
-        foreach (var column in this.column.Values)
+        foreach (var columnValue in _column.Values)
         {
-            Task<(string, double)> t = Task.Run(() =>
+            Task<(string, float)> t = Task.Run(() =>
             {
-                var x = Get<double>(column.name).ToArray();
-                var y = Get<double>(columnName).ToArray();
-                var corr = correlation.Correlation(ref x, ref y);
-                return (column.name, corr);
+                var x = Get<float>(columnValue.name).ToArray();
+                var y = Get<float>(columnName).ToArray();
+                var corr = _correlation.Correlation(ref x, ref y);
+                return (columnValue.name, corr);
             });
             tasks.Add(t);
         }
+
         var result = await Task.WhenAll(tasks.ToArray());
-        var c = string.Join(",", result.Select(c => c.Item1));
-        var r = string.Join(",", result.Select(c => c.Item2));
-        return new DataArray(new Column(c), new Row(r), correlation);
+        sb.AppendJoin(',', result.Select(column => column.Item1));
+        var column = new Column(sb.ToString());
+        sb.Clear();
+        sb.AppendJoin(',', result.Select(row => row.Item2.ToString(CultureInfo.InvariantCulture)));
+        var row = new Row(sb.ToString());
+        return new DataArray(column, row, _correlation);
+    }
+
+    /// <summary>
+    /// Метод, расчитывающий корреляцию для конкретного столбца
+    /// </summary>
+    /// <param name="columnName">Наименование столбца</param>
+    /// <returns>DataArray</returns>
+    public DataArray Correlation(string columnName)
+    {
+        List<(string name, float correlation)> result = new();
+        var sb = new StringBuilder();
+
+        foreach (var columnValue in _column.Values)
+        {
+            var x = Get<float>(columnValue.name).ToArray();
+            var y = Get<float>(columnName).ToArray();
+            var corr = _correlation.Correlation(ref x, ref y);
+            result.Add((columnValue.name, corr));
+        }
+
+        sb.AppendJoin(',', result.Select(column => column.name));
+        var column = new Column(sb.ToString());
+        sb.Clear();
+        sb.AppendJoin(',', result.Select(row => row.correlation.ToString(CultureInfo.InvariantCulture)));
+        var row = new Row(sb.ToString());
+        return new DataArray(column, row, _correlation);
     }
 }
 
-static class DataExtension
+internal static class DataExtension
 {
     public static List<string> Unique(this List<Row> rows)
     {
-        if (rows.First().Values.Length > 1)
-        {
-            throw new ArgumentOutOfRangeException();
-        }
+        if (rows.First().Values.Length > 1) throw new ArgumentOutOfRangeException();
         return rows.Select(r => r[0]).Distinct().ToList();
-    }
-
-    public static List<T> Unique<T>(this List<Row> rows)
-    {
-        if (rows.First().Values.Length > 1)
-        {
-            throw new ArgumentOutOfRangeException();
-        }
-        return rows.Select(r => r.Get<T>(0)).Distinct().ToList();
     }
 }

@@ -2,5 +2,5 @@
 
 public abstract class BaseElement
 {
-    protected const string PATTERN = "(?<=^|,)([^,]*)(?=,|$)";
+    protected const string Pattern = "(?<=^|,)([^,]*)(?=,|$)";
 }

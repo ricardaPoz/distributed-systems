@@ -5,20 +5,21 @@ namespace CSharp.Reader.CSV;
 
 public class CsvReader : IReadableFile
 {
-    private readonly string path;
+    private readonly string _path;
+
     public CsvReader(string path)
     {
-        this.path = path;
+        this._path = path;
     }
 
     public IEnumerable<string> ReadFile()
     {
-        return File.ReadAllLines(this.path).Where(s => !string.IsNullOrEmpty(s));
+        return File.ReadAllLines(_path).Where(s => !string.IsNullOrEmpty(s));
     }
 
     public async Task<IEnumerable<string>> ReadFileAsync()
     {
-        var lines = await File.ReadAllLinesAsync(this.path);
+        var lines = await File.ReadAllLinesAsync(_path);
         return lines.Where(s => !string.IsNullOrEmpty(s));
     }
 
