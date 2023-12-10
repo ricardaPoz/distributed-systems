@@ -1,24 +1,43 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 using CSharp.Reader.CSV;
 
 namespace CSharp.Benchmarks;
 
+[Config(typeof(AntiVirusFriendlyConfig))]
 [MemoryDiagnoser]
 [RankColumn]
 public class BenchmarkReader
 {
-    private static readonly string path = @"C:\Users\santa\source\Repos\distributed-systems\data\Salary.csv";
-
-    [Benchmark]
-    public void ReadFileTest()
+    private class AntiVirusFriendlyConfig : ManualConfig
     {
-        var result = new CsvReader(path).ReadFile();
+        public AntiVirusFriendlyConfig()
+        {
+            AddJob(Job.MediumRun
+                .WithToolchain(InProcessNoEmitToolchain.Instance));
+        }
+    }
+    private readonly string _path;
+
+    public BenchmarkReader()
+    {
+        _path = Directory.GetParent(Directory.GetCurrentDirectory())
+            ?.Parent?.Parent?.Parent + @"\data\Salary.csv";
     }
 
     [Benchmark]
-    public async Task ReadFileTestAsync()
+    public List<string> ReadFileTest()
     {
-        var x = new CsvReader(path);
-        var result = await x.ReadFileAsync();
+        return new CsvReader(_path).ReadFile().ToList();
+    }
+
+    [Benchmark]
+    public async Task<List<string>> ReadFileTestAsync()
+    {
+        var reader = new CsvReader(_path);
+        var result = await reader.ReadFileAsync();
+        return result.ToList();
     }
 }

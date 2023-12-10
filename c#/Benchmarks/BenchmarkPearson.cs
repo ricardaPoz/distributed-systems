@@ -28,8 +28,7 @@ public class BenchmarkPearson
     private readonly DataArray _dataArray;
     private readonly DataArray _randomDataArray;
 
-    [SuppressMessage("ReSharper.DPA", "DPA0002: Excessive memory allocations in SOH",
-        MessageId = "type: System.String; size: 279MB")]
+    
     public BenchmarkPearson()
     {
         #region Создание DataArray на основе CSV файла
