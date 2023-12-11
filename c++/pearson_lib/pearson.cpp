@@ -1,6 +1,6 @@
 #include "pearson.h"
 
-float Correlation(const float* x, const float* y , const size_t size)
+float pearson::Correlation(const float* x, const float* y , const size_t size)
 {
     const float meanX = Average(x, size);
     const float meanY = Average(y, size);
@@ -19,7 +19,7 @@ float Correlation(const float* x, const float* y , const size_t size)
     return numerator / sqrtf(denominatorX * denominatorY);;
 }
 
-float Average(const float* arr, const size_t size)
+float pearson::Average(const float* arr, const size_t size)
 {
     float sum = 0.0f;
 
