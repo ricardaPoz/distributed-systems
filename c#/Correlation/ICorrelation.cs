@@ -10,6 +10,5 @@ public interface ICorrelation<T>
 
 public interface ICorrelation
 {
-    double Correlation(ref double[] x, ref double[] y);
     float Correlation(ref float[] x, ref float[] y);
 }

@@ -12,23 +12,16 @@ public class Row : BaseElement
         Values = Regex.Matches(line, Pattern)
             .Select(match => match.Value).ToArray();
     }
-
-
-
-    public string this[int index]
+    public float Get(int index)
     {
-        get
+        if (index >= 0 && index < Values.Length)
         {
-            if (index >= 0 && index < Values.Length) return Values[index];
-            throw new ArgumentOutOfRangeException();
+            return float.TryParse(Values[index], CultureInfo.InvariantCulture, out var value)
+                ? value
+                : throw new InvalidCastException();
         }
-        set
-        {
-            if (index >= 0 && index < Values.Length) Values[index] = value;
-            else throw new ArgumentOutOfRangeException();
-        }
+        throw new ArgumentOutOfRangeException();
     }
-
     public T Get<T>(int index)
     {
         if (index >= 0 && index < Values.Length) 

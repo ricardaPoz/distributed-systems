@@ -1,13 +1,13 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 using CSharp.Correlation;
 using CSharp.Data;
-using CSharp.Element;
 using CSharp.Reader.CSV;
+using Perfolizer.Horology;
 
 namespace CSharp.Benchmarks;
 
@@ -20,97 +20,79 @@ public class BenchmarkPearson
     {
         public AntiVirusFriendlyConfig()
         {
+            SummaryStyle = SummaryStyle.Default
+                .WithRatioStyle(RatioStyle.Percentage)
+                .WithTimeUnit(TimeUnit.Second);
+            
             AddJob(Job.MediumRun
                 .WithToolchain(InProcessNoEmitToolchain.Instance));
         }
     }
-
-    private readonly DataArray _dataArray;
-    private readonly DataArray _randomDataArray;
-
-    
+    private readonly Data.Data _dataArray;
+    private readonly Data.Data _dataDictionary;
+    private readonly Data.Data<float> _dataArrayGeneric;
+    private readonly Data.Data<float> _dataDictionaryGeneric;
     public BenchmarkPearson()
     {
-        #region Создание DataArray на основе CSV файла
+        #region Создание DataArray и DataDictionary на основе CSV файла
 
         var path = Directory.GetParent(Directory.GetCurrentDirectory())
-            ?.Parent?.Parent?.Parent + @"\data\Salary.csv";
+            ?.Parent?.Parent?.Parent + @"\data\SalaryFloat.csv";
 
         var reader = new CsvReader(path);
         _dataArray = new DataArray(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
-        var nameColumns = new[] { "Gender", "Race", "Country", "Job Title" };
-        foreach (var nameColumn in nameColumns)
-        {
-            var unique = _dataArray[nameColumn]
-                .Unique()
-                .Select((value, index) => (value, index))
-                .ToDictionary(v => v.value, v => v.index.ToString());
-            _dataArray.Replace(unique);
-        }
-
-        #endregion
-
-        #region Создание DataArray на основе заданных колличества строк и стообцов
-        
-        var sb = new StringBuilder();
-        var random = new Random();
-        const int countRows = 10000, countColumns = 100;
-
-        var columns = new string [countColumns];
-        var rows = new List<Row>();
-
-        for (var i = 0; i < countColumns; i++) columns[i] = i.ToString();
-
-        for (var i = 0; i < countRows; i++)
-        {
-            var row = Enumerable.Repeat(0, 100)
-                .Select(inx => random.NextSingle());
-
-            sb.AppendJoin(',', row);
-            rows.Add(new Row(sb.ToString()));
-            sb.Clear();
-        }
-
-        sb.AppendJoin(',', columns);
-        _randomDataArray = new DataArray(new Column(sb.ToString()), rows, new Pearson());
-
+        _dataArrayGeneric = new DataArray<float>(reader.GetColumn(), reader.GetRows().ToList(), new Pearson<float>());
+        _dataDictionaryGeneric = new DataDictionary<float>(reader.GetColumn(), reader.GetRows().ToList(), new Pearson<float>());
+        _dataDictionary = new DataDictionary(reader.GetColumn(), reader.GetRows().ToList(), new Pearson());
         #endregion
     }
 
-    [Benchmark(Description = "Multithreading correlation. Rows = 10000, Columns = 100")]
-    public async Task<DataArray> RCorrelationAsync()
-    {
-        return await _randomDataArray.CorrelationAsync("0");
-    }
-
-    [Benchmark(Description = "Synchronous correlation. Rows = 10000, Columns = 100")]
-    public DataArray RCorrelation()
-    {
-        return _randomDataArray.Correlation("0");
-    }
-
-    [Benchmark(Description = "Multithreading correlation CSV file. Rows = 6685, Columns = 10")]
-    public async Task<DataArray> CorrelationAsync()
-    {
-        return await _dataArray.CorrelationAsync("Salary");
-    }
-
-    [Benchmark(Description = "Synchronous correlation CSV file. Rows = 6685, Columns = 10")]
-    public DataArray Correlation()
-    {
-        return _dataArray.Correlation("Salary");
-    }
-    
-    [Benchmark(Description = "Multithreading correlation matrix CSV file. Rows = 6685, Columns = 10")]
-    public async Task<List<(string name, DataArray)>> MCorrelationAsync()
+    [Benchmark(Description = "Async correlation matrix CSV file. Array. Rows = 6685, Columns = 10")]
+    public async Task<List<(string name, List<(string columnName, float coef)>)>> ArrayCorrelationAsync()
     {
         return await _dataArray.CorrelationAsync();
     }
 
-    [Benchmark(Description = "Synchronous correlation matrix CSV file. Rows = 6685, Columns = 10")]
-    public List<(string name, DataArray)> MCorrelation()
+    [Benchmark(Description = "Synchronous correlation matrix CSV file. Array. Rows = 6685, Columns = 10")]
+    public List<(string name, List<(string columnName, float coef)>)> ArrayCorrelation()
     {
         return _dataArray.Correlation();
     }
     
+    [Benchmark(Description = "Async correlation matrix CSV file. Dictionary. Rows = 6685, Columns = 10")]
+    public async Task<List<(string name, List<(string columnName, float coef)>)>> DictionaryCorrelationAsync()
+    {
+        return await _dataDictionary.CorrelationAsync();
+    }
+
+    [Benchmark(Description = "Synchronous correlation matrix CSV file. Dictionary. Rows = 6685, Columns = 10")]
+    public List<(string name, List<(string columnName, float coef)>)> DictionaryCorrelation()
+    {
+        return _dataDictionary.Correlation();
+    }
+    
+    // dasdasdas
+    [Benchmark(Description = "Generic async correlation matrix CSV file. Array. Rows = 6685, Columns = 10")]
+    public async Task<List<(string name, List<(string columnName, float coef)>)>> GArrayCorrelationAsync()
+    {
+        return await _dataArrayGeneric.CorrelationAsync();
+    }
+
+    [Benchmark(Description = "Generic synchronous correlation matrix CSV file. Array. Rows = 6685, Columns = 10")]
+    public List<(string name, List<(string columnName, float coef)>)> GArrayCorrelation()
+    {
+        return _dataArrayGeneric.Correlation();
+    }
+    
+    [Benchmark(Description = "Generic async correlation matrix CSV file. Dictionary. Rows = 6685, Columns = 10")]
+    public async Task<List<(string name, List<(string columnName, float coef)>)>> GDictionaryCorrelationAsync()
+    {
+        return await _dataDictionaryGeneric.CorrelationAsync();
+    }
+
+    [Benchmark(Description = "Generic synchronous correlation matrix CSV file. Dictionary. Rows = 6685, Columns = 10")]
+    public List<(string name, List<(string columnName, float coef)>)> GDictionaryCorrelation()
+    {
+        return _dataDictionaryGeneric.Correlation();
+    }
 }

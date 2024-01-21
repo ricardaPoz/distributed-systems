@@ -30,7 +30,6 @@ public class Pearson<T> : ICorrelation<T>
 
         return correlation;
     }
-
     private K ConvertTo<K>(T value) where K : struct, IFloatingPoint<K>
     {
         return (K)Convert.ChangeType(value, typeof(K));
@@ -44,31 +43,6 @@ public class Pearson<T> : ICorrelation<T>
 
 public class Pearson : ICorrelation
 {
-    public double Correlation(ref double[] x, ref double[] y)
-    {
-        if (x.Length != y.Length)
-            throw new ArgumentException();
-
-        var n = x.Length;
-        var meanX = x.Average();
-        var meanY = y.Average();
-
-        double numerator = 0;
-        double denominatorX = 0;
-        double denominatorY = 0;
-
-        for (var i = 0; i < n; i++)
-        {
-            numerator += (x[i] - meanX) * (y[i] - meanY);
-            denominatorX += Math.Pow(x[i] - meanX, 2);
-            denominatorY += Math.Pow(y[i] - meanY, 2);
-        }
-
-        var correlation = numerator / Math.Sqrt(denominatorX * denominatorY);
-
-        return correlation;
-    }
-
     public float Correlation(ref float[] x, ref float[] y)
     {
         if (x.Length != y.Length)
