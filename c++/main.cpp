@@ -7,31 +7,24 @@ int main()
 {
     std::string* header;
     float** rows;
-    size_t size;
-    size_t countFilds;
+    size_t count_rows;
+    size_t count_column;
 
-    std::filesystem::path currentPath = std::filesystem::current_path()
-            .parent_path().parent_path() / "data" / "SalaryFloat.csv";
+    const std::filesystem::path currentPath = "..\\..\\data\\SalaryFloat.csv";
 
-    reader::read_csv(currentPath.string(), header, rows, size, countFilds);
+    std::cout << absolute(currentPath).string();
+    reader::read_csv(absolute(currentPath).string(), header, rows, count_rows, count_column);
 
-    DataArray data{header, rows, size, countFilds};
-    auto x = data.CorrelationParallel();
+    DataArray data{header, rows, count_rows, count_column};
+    float** correlation_matrix = data.CorrelationMultithreading();
 
-    for (size_t i = 0; i < countFilds; i++)
+    for (size_t i = 0; i < count_column; i++)
     {
-        for (size_t j = 0; j < countFilds; j++)
+        for (size_t j = 0; j < count_column; j++)
         {
-            std::cout << "[" << x[i][j] << "]";
+            std::cout << "[" << correlation_matrix[i][j] << "]";
         }
         std::cout <<  std::endl;
     }
-
-    for (size_t i = 0; i < countFilds; i++)
-    {
-        delete[] x[i];
-    }
-    delete[] x;
-
     return 0;
 }

@@ -18,7 +18,7 @@ DataArray::~DataArray()
     delete[] rows;
 }
 
-float** DataArray::CorrelationParallel()
+float** DataArray::CorrelationMultithreading()
 {
     float** result = new float *[countColumns];
     std::thread* threads = new std::thread[countColumns];
@@ -45,7 +45,7 @@ float** DataArray::CorrelationParallel()
     return result;
 }
 
-float* DataArray::CorrelationParallel(size_t index)
+float* DataArray::CorrelationMultithreading(size_t index)
 {
     float* res = new float[countColumns];
     std::thread* threads = new std::thread[countColumns];

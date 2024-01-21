@@ -9,9 +9,9 @@ class DataArray {
 public:
     DataArray(std::string* header, float** rows, const size_t& countRows, const size_t& countColumns);
     ~DataArray();
-    [[nodiscard]] float* CorrelationParallel(size_t index);
+    [[nodiscard]] float* CorrelationMultithreading(size_t index);
     [[nodiscard]] float* Correlation(size_t index) const;
-    [[nodiscard]] float** CorrelationParallel();
+    [[nodiscard]] float** CorrelationMultithreading();
     [[nodiscard]] float** Correlation() const;
 
 private:

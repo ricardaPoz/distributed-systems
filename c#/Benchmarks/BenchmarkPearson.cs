@@ -71,7 +71,6 @@ public class BenchmarkPearson
         return _dataDictionary.Correlation();
     }
     
-    // dasdasdas
     [Benchmark(Description = "Generic async correlation matrix CSV file. Array. Rows = 6685, Columns = 10")]
     public async Task<List<(string name, List<(string columnName, float coef)>)>> GArrayCorrelationAsync()
     {

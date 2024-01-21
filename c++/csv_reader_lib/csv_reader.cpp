@@ -1,23 +1,23 @@
 #include "csv_reader.h"
-
+#include <fstream>
 #include <sstream>
 
-void reader::read_csv(const std::string& filename, std::string*& array, size_t& size)
+void reader::read_csv(const std::string& filename, std::string*& array, size_t& count_rows)
 {
     std::ifstream file(filename);
 
-    size = 0;
+    count_rows = 0;
     std::string line;
 
     while (std::getline(file, line))
-        size++;
+        count_rows++;
 
     file.clear();
     file.seekg(0, std::ios::beg);
 
-    array = new std::string[size];
+    array = new std::string[count_rows];
 
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < count_rows; ++i)
     {
         std::getline(file, line);
         array[i] = line;
@@ -25,34 +25,34 @@ void reader::read_csv(const std::string& filename, std::string*& array, size_t& 
     file.close();
 }
 
-void reader::read_csv(const std::string& filename, std::string*& header, float**& rows, size_t& size, size_t& countFilds)
+void reader::read_csv(const std::string& filename, std::string*& header, float**& rows, size_t& count_rows, size_t& count_column)
 {
     std::string* data;
-    countFilds = 0;
+    count_column = 0;
 
-    read_csv(filename, data, size);
+    read_csv(filename, data, count_rows);
 
     std::istringstream headerStream(data[0]);
     std::string field;
     while (std::getline(headerStream, field, ','))
     {
-        countFilds++;
+        count_column++;
     }
 
-    header = new std::string[countFilds];
+    header = new std::string[count_column];
     headerStream.clear();
     headerStream.seekg(0);
-    for (size_t i = 0; i < countFilds; ++i)
+    for (size_t i = 0; i < count_column; ++i)
     {
         std::getline(headerStream, header[i], ',');
     }
 
-    rows = new float *[size - 1];
-    for (size_t i = 1; i < size; i++)
+    rows = new float *[count_rows - 1];
+    for (size_t i = 1; i < count_rows; i++)
     {
-        rows[i - 1] = new float[countFilds];
+        rows[i - 1] = new float[count_column];
         std::istringstream rowStream(data[i]);
-        for (size_t j = 0; j < countFilds; j++)
+        for (size_t j = 0; j < count_column; j++)
         {
             std::string value;
             std::getline(rowStream, value, ',');
@@ -64,7 +64,7 @@ void reader::read_csv(const std::string& filename, std::string*& header, float**
             }
         }
     }
-    size--;
+    count_rows--;
     delete[] data;
 }
 
